@@ -179,12 +179,10 @@ async function music(bot, message, args, todo) {
                         embeds: [
                           {
                             title: "**Selected**",
-                            description: `[${
-                              videoResult.videos[interaction.data.custom_id]
-                                .title
-                            }](${
-                              videoResult.videos[interaction.data.custom_id].url
-                            }) to queue`,
+                            description: `[${videoResult.videos[interaction.data.custom_id]
+                              .title
+                              }](${videoResult.videos[interaction.data.custom_id].url
+                              }) to queue`,
                           },
                         ],
                         components: [],
@@ -378,15 +376,6 @@ async function video_player(bot, guild, message) {
     connectionMap.delete(message.guildID);
     return connectionMap.delete(message.guildID);
   }
-  try {
-    fs.accessSync(path.join(__dirname, `./${message.guildID}.mp3`));
-    console.log("file ok");
-  } catch {
-    console.log("file not ok");
-    const data = "";
-    fs.writeFileSync(path.join(__dirname, `./${message.guildID}.mp3`), data);
-  }
-
   bot
     .joinVoiceChannel(message.member.voiceState.channelID)
     .catch((err) => {
@@ -399,64 +388,65 @@ async function video_player(bot, guild, message) {
     })
     .then((connection) => {
       try {
-        ytdl(database_queue.songs[0].url, {
+        const download = ytdl(database_queue.songs[0].url, {
           filter: function (format) {
             return format.container === "mp4" && !format.encoding;
           },
           quality: "lowest",
-        }).pipe(
-          fs
-            .createWriteStream(path.join(__dirname, `./${message.guildID}.mp3`))
-            .on("finish", () => {
-              const embedplaying = new Eris.RichEmbed()
-                .setTitle("**Now Playing**")
-                .setDescription(
-                  `[${database_queue.songs[0].title}](${database_queue.songs[0].url}) \n` +
-                    "`[00:00/" +
-                    database_queue.songs[0].duration +
-                    "]`"
-                );
-              connection.play(path.join(__dirname, `./${message.guildID}.mp3`));
-              connectionMap.set(message.guildID, connection);
-              console.log("playing");
-              bot.createMessage(message.channel.id, {
-                embeds: [embedplaying],
-              });
-              connection.once("end", async () => {
-                const queueShift = async (guild) => {
-                  let database_queue = await SQueue.findOne({
-                    guildID: guild,
-                  });
-                  if (database_queue.songs.length == 1) {
-                    return await SQueue.findOneAndUpdate(
-                      {
-                        guildID: guild,
-                      },
-                      {
-                        $pullAll: {
-                          songs: database_queue.songs,
-                        },
-                      }
-                    );
-                    await video_player(bot, guild, message);
-                  } else {
-                    await SQueue.findOneAndUpdate(
-                      {
-                        guildID: guild,
-                      },
-                      {
-                        $pop: {
-                          songs: -1,
-                        },
-                      }
-                    );
-                    await video_player(bot, guild, message);
-                  }
-                };
-                await queueShift(guild);
-              });
-            })
+        });
+        connection.play(
+          ytdl(database_queue.songs[0].url, {
+            filter: "audioonly",
+            quality: "highestaudio",
+          })
         );
+        const embedplaying = new Eris.RichEmbed()
+          .setTitle("**Now Playing**")
+          .setDescription(
+            `[${database_queue.songs[0].title}](${database_queue.songs[0].url}) \n` +
+            "`[00:00/" +
+            database_queue.songs[0].duration +
+            "]`"
+          );
+        connectionMap.set(message.guildID, connection);
+        console.log("playing");
+        bot.createMessage(message.channel.id, {
+          embeds: [embedplaying],
+        });
+        connection.once("end", async () => {
+          console.log("ending")
+          const queueShift = async (guild) => {
+            let database_queue = await SQueue.findOne({
+              guildID: guild,
+            });
+            if (database_queue.songs.length == 1) {
+              await SQueue.findOneAndUpdate(
+                {
+                  guildID: guild,
+                },
+                {
+                  $pullAll: {
+                    songs: database_queue.songs,
+                  },
+                }
+              );
+              return await video_player(bot, guild, message);
+            } else {
+              await SQueue.findOneAndUpdate(
+                {
+                  guildID: guild,
+                },
+                {
+                  $pop: {
+                    songs: -1,
+                  },
+                }
+              );
+              return await video_player(bot, guild, message);
+            }
+          };
+          await queueShift(guild);
+        });
       } catch {
         bot.createMessage(message.channel.id, "Error innitiating" + err);
       }

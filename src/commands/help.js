@@ -1,13 +1,24 @@
+const { connection } = require("mongoose");
+const ytdl = require("ytdl-core");
+
 const commands = [require("../index")];
 
 module.exports = async function test(bot, Eris) {
     const Constants = Eris.Constants;
 
-    bot.registerCommand("help", (msg, args) => {
-        const prefixes = bot.guildPrefixes
-        const guild = msg.guildID
-        const text = 'FurcaFM commands \n**play**, **queue**, **skip**, **stop** \nTo see more help use ' + prefixes[guild] + "help (command)"
-        return text
+    bot.registerCommand("test", (msg, args) => {
+        bot.joinVoiceChannel(msg.member.voiceState.channelID).then(async (connection) => {
+            const download = await ytdl("https://www.youtube.com/watch?v=ytWz0qVvBZ0", {
+                filter: "audioonly",
+                quality: "highestaudio"
+            });
+            connection.play(download)
+            console.log("playing")
+            connection.once("end", () => {
+                return bot.leaveVoiceChannel(msg.member.voiceState.channelID)
+            })
+            connection.once("error", (err) => console.log(err))
+        })
     }, {
         description: "Help list",
         fullDescription: "Command help list",

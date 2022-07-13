@@ -22,7 +22,7 @@ const bot = new Eris.CommandClient(process.env.TOKEN, {}, {
     description: "A test bot made with Eris",
     owner: "somebody",
     prefix: "!",
-    defaultHelpCommand: false
+    defaultHelpCommand: true
 })
 
 async function registerCommands(dir) {
