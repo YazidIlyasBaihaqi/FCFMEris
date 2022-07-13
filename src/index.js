@@ -11,7 +11,7 @@ const app = express();
 const PORT = process.env.PORT || 80;
 
 app.get('/', (req, res) => {
-    res.sendFile('./statusPage.html')
+    res.sendFile(__dirname + "/statusPage.html")
 });
 
 app.listen(PORT, () => {
