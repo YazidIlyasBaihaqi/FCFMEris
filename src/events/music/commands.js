@@ -387,69 +387,72 @@ async function video_player(bot, guild, message) {
       console.log(err); // Log the error
     })
     .then((connection) => {
-      try {
-        const download = ytdl(database_queue.songs[0].url, {
-          filter: function (format) {
-            return format.container === "mp4" && !format.encoding;
-          },
-          quality: "lowest",
-        });
-        connection.play(
-          ytdl(database_queue.songs[0].url, {
-            filter: "audioonly",
-            quality: "highestaudio",
-          })
+      const download = ytdl(database_queue.songs[0].url, {
+        filter: "audioonly",
+        quality: "highestaudio",
+      });
+      connection.play(download);
+      const embedplaying = new Eris.RichEmbed()
+        .setTitle("**Now Playing**")
+        .setDescription(
+          `[${database_queue.songs[0].title}](${database_queue.songs[0].url}) \n` +
+          "`[00:00/" +
+          database_queue.songs[0].duration +
+          "]`"
         );
-        const embedplaying = new Eris.RichEmbed()
-          .setTitle("**Now Playing**")
-          .setDescription(
-            `[${database_queue.songs[0].title}](${database_queue.songs[0].url}) \n` +
-            "`[00:00/" +
-            database_queue.songs[0].duration +
-            "]`"
-          );
-        connectionMap.set(message.guildID, connection);
-        console.log("playing");
-        bot.createMessage(message.channel.id, {
-          embeds: [embedplaying],
-        });
-        connection.once("end", async () => {
-          console.log("ending")
-          const queueShift = async (guild) => {
-            let database_queue = await SQueue.findOne({
-              guildID: guild,
-            });
-            if (database_queue.songs.length == 1) {
-              await SQueue.findOneAndUpdate(
-                {
-                  guildID: guild,
+      connectionMap.set(message.guildID, connection);
+      console.log("playing");
+      bot.createMessage(message.channel.id, {
+        embeds: [embedplaying],
+      });
+      connection.once("end", async () => {
+        console.log("ending")
+        const queueShift = async (guild) => {
+          let database_queue = await SQueue.findOne({
+            guildID: guild,
+          });
+          if (database_queue.songs.length == 1) {
+            await SQueue.findOneAndUpdate(
+              {
+                guildID: guild,
+              },
+              {
+                $pullAll: {
+                  songs: database_queue.songs,
                 },
-                {
-                  $pullAll: {
-                    songs: database_queue.songs,
-                  },
-                }
-              );
-              return await video_player(bot, guild, message);
-            } else {
-              await SQueue.findOneAndUpdate(
-                {
-                  guildID: guild,
+              }
+            );
+            return await video_player(bot, guild, message);
+          } else {
+            await SQueue.findOneAndUpdate(
+              {
+                guildID: guild,
+              },
+              {
+                $pop: {
+                  songs: -1,
                 },
-                {
-                  $pop: {
-                    songs: -1,
-                  },
-                }
-              );
-              return await video_player(bot, guild, message);
-            }
-          };
-          await queueShift(guild);
-        });
-      } catch {
+              }
+            );
+            return await video_player(bot, guild, message);
+          }
+        };
+        await queueShift(guild);
+      });
+      connection.on("err", err => {
         bot.createMessage(message.channel.id, "Error innitiating" + err);
-      }
+        SQueue.findOneAndUpdate(
+          {
+            guildID: guild,
+          },
+          {
+            $pop: {
+              songs: -1,
+            },
+          }
+        );
+        return video_player(bot, guild, message);
+      })
     });
 }
 

@@ -149,18 +149,4 @@ module.exports = async function play(bot, Eris) {
         description: "Will display the current queue",
         fullDescription: "Will display the current queue"
     })
-
-    // bot.registerCommand("testplay", (msg, args) => {
-    //     try {
-    //         fs.accessSync(path.join(__dirname, `./${msg.guildID}.mp3`))
-    //         console.log('file ok')
-    //     } catch {
-    //         console.log('file not ok')
-    //         const data = ''
-    //         fs.writeFileSync(path.join(__dirname, `./${msg.guildID}.mp3`), data)
-    //     }
-    // }, { 
-    //     description: "Will play you a music type",
-    //     fullDescription: "Will play you a music type 't?play (link)' or 't?play video title' to use"
-    // });
 }
